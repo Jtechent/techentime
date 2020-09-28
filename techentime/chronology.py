@@ -1,9 +1,9 @@
 #### IMPORT SECTION ####################################### BEGINS
 
 from collections import namedtuple
-from collections.abc import Iterable
+from collections.abc import Iterable, Collection
 from types import FunctionType
-from techentime.techentime import Techentime
+from techentime.techentime import Techentime, timestamp_to_techentime
 from math import inf
 
 #### IMPORT SECTION ####################################### ENDS
@@ -76,7 +76,7 @@ class Node (namedtuple('Node', ['key',])):
         self.left   = left if left else NILL
         self.right  = right if right else NILL
         self.color  = True
-        self.data   = []
+        self.data   = [] # data is always null on init rn
 
     def compare (self, other, op):
         '''compare self to other
@@ -283,12 +283,15 @@ class display_tree(RB_Tree):
         
 
 class Chronology (RB_Tree):
-    def __init__ (self, root: Node):
+    def __init__ (self, unit: int):
         '''creates a tree where labels must be Techentime
            want to change this so that we check for 2-tuple
         '''
-        if not isinstance(root.key, Techentime):
-            raise TypeError("Chronologies Require Techentime values not {type(root.key)} values for keys.")
+        if not isinstance(unit, int) :
+            raise TypeError("Chrononology unit must be of type int")
+        # add epoch root
+        epoch = timestamp_to_techentime('1970-01-01')
+        root = Node(epoch << unit) if unit >= 0 else Node(epoch >> unit)
         super().__init__(root)
 
 
@@ -297,6 +300,9 @@ class Chronology (RB_Tree):
 #### CLASSY SECTION ####################################### ENDS
     
 #### FUNCTION SECTION #################################### BEGINS
+
+def label_process (label: (object, object)) -> Node:
+    pass
 
 def get_sibling (node: Node) -> Node:
     parent = node.parent
@@ -599,10 +605,4 @@ def get_last (chron: Chronology, start=Techentime(-inf,0), stop=Techentime(inf,0
     
 
 #### FUNCTION SECTION #################################### ENDS 
-
-## TESTS
-
-def test_a ():
-    from random import random
-    times = [int(random*10000000) for _ in range(100)]
 
