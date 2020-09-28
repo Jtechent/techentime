@@ -11,11 +11,14 @@ from math import inf
 #### CLASSY SECTION ####################################### BEGINS
 
 class Nill (namedtuple('VOID', ['key',])):
+    '''Nill is like a tree but is None equiv'''
     def __new__(cls):
+        '''creates the nill object which is empty'''
         obj = super(Nill, cls).__new__(cls, None)
         return obj
     
     def __init__ (self):
+        '''initialize nill tree; all data members are none'''
         self.parent = None
         self.left   = None
         self.right  = None
@@ -23,6 +26,9 @@ class Nill (namedtuple('VOID', ['key',])):
         self.data   = "The void is vast. The void blinks."
 
     def compare (self, other, op):
+        '''comparison operations fail because Nill is None equiv
+           maybe I should just compare the other to none instead
+        '''
         raise ValueError("Nothing compares to the void.")
     def __lt__(self, other):
         return self.compare(other, lambda x, y: x < y) 
@@ -43,10 +49,13 @@ class Nill (namedtuple('VOID', ['key',])):
         return self.compare(other, lambda x, y: x >= y) 
 
     def __repr__(self):
+        '''repr is like repr for rb-tree, no children displayed'''
         return ("NILL: CONTAINS INFINITE DARKNESS")
 
  
- 
+# create and initialize nill; nill is self referential
+# I should try changing the none assignments in init to self
+# if that fails I can always produce nill by closure
 NILL = Nill()
 NILL.parent = NILL
 NILL.left   = NILL
@@ -54,14 +63,15 @@ NILL.right  = NILL
 
 
 
-
-
 class Node (namedtuple('Node', ['key',])):
+    '''node used in rb-tree'''
     def __new__(cls, key, **kwargs):
+        '''creates nambed tuple decending node object with key'''
         obj = super(Node, cls).__new__(cls, key)
         return obj
     
     def __init__ (self, key, parent=None, left=None, right=None):
+        '''initialize the node with proper relations'''
         self.parent = parent if parent else NILL
         self.left   = left if left else NILL
         self.right  = right if right else NILL
@@ -69,6 +79,10 @@ class Node (namedtuple('Node', ['key',])):
         self.data   = []
 
     def compare (self, other, op):
+        '''compare self to other
+           if other has key, compare self to other.key
+           otherwise compare self to other
+        '''
         if 'key' in dir(other):
             other = other.key
         return op(self.key, other) 
@@ -91,6 +105,10 @@ class Node (namedtuple('Node', ['key',])):
         return self.compare(other, lambda x, y: x >= y) 
 
     def __getitem__(self, key):
+        '''search for key in tree rooted at self
+           might be wise to impliment __getitem__ in nill
+           nill.__getitem__ could always return none
+        '''
         if self.key == key:
             return self
         elif self.key > key and self.left is not NILL:
@@ -101,13 +119,16 @@ class Node (namedtuple('Node', ['key',])):
             return None
 
     def __iter__(self):
+        '''returns in order iterator'''
         def iterer ():
             current = self
             while current:
                 yield current
                 current = successor(current)
         return iterer()
+
     def __reversed__(self):
+        '''returns in reverse order iterator''' 
         def iterer ():
             current = self
             while current:
@@ -117,29 +138,41 @@ class Node (namedtuple('Node', ['key',])):
         
 
 class RB_Tree ():
+    '''implimentation of red black tree'''
     def __init__(self, root: Node or Nill):
+        '''tree requires a root node; of type Node or Nill'''
         if isinstance(root, Node) or isinstance(root, Nill):
             self.root = root
             self.root.color = False
             self.keytype    = object
         else:
             raise TypeError(f"Tree root must be Node not {type(root)}")
+
     def __repr__(self):
+        '''combines repr of root with the repr of rb trees  generated at left and right'''
         if self.root is NILL:
             return repr(self.root)
         return f"{self.root.key} color={self.root.color}: {str(self.root.data)}\nLEFT OF {self.root.key}: {str(display_tree(self.root.left))}\nRIGHT of {self.root.key}: {str(display_tree(self.root.right))}"
 
     def insert (self, node: Node) -> Node:
-        '''returns root'''
+        '''insert using ordered binary tree insert
+           balance with red black tree balancing
+           set the root to the new root after balance
+           return the new root
+        '''
         self.root = balanced_insert(self.root, node, rb_balance)
         return self.root
         
 
     def __iter__(self):
+        '''returns in order iterable
+           iterable returned traverses the entire tree
+           maybe I should alter this so that it calls the nodes iter
+        '''
         def tree_iter ():
-            least_left = least(self.root.left)
-            current = least_left if least_left is not NILL else self.root
-            while (current):
+            least_left = least(self.root.left) # smallest value; why not call least on root?
+            current = least_left if least_left is not NILL else self.root # have to do this because I did not call least on root
+            while (current): # node data should be containers, so i have to interate over those
                 if current.data == []:
                     current = successor(current)
                     continue
@@ -152,32 +185,34 @@ class RB_Tree ():
 
     def __getitem__ (self, key) -> []:
         if not isinstance(key, slice):
+            # if key is not a slice, we are looking for a direct match
             node = self.root[key]
             return node.data if node else []
         else:
-            node = self.get_first(key.start)
+            node = self.get_first(key.start) # assume get first gets the least-greater then key.start
             if (not node) or node.key > key.stop:
-                return []
+                return [] # if there are not any nodes in the period defined by slice then we have the answer
         values = []
         start = key.start
-        stop  = key.stop
+        stop  = key.stop # what if slice is made via [n:]? or [:n]? I assume slices like tree[1:23]
         step  = abs(key.step) if key.step else 1
         traverse = iter if step > 0 else reversed
 
-        for i, value in enumerate(traverse(node)):
-            if i>=stop.n:
+        for i, value in enumerate(traverse(node)): # traversal is done in the node level
+            if i>=stop.n: # here we assume that stop is a techentime object; also, i is not a number expected to have meaningful compare to techentime.n
                 break
             if i%step == 0:
                 if isinstance(value.data, Iterable):
-                    values.extend(value.data)
+                    values.extend(value.data) # list data added to the list of values top level
                 else:
                     if value.data is not None:
-                        values.append(value.data)
+                        values.append(value.data) # add data if not iterable? should change to add data if not container correct?
         return values
 
  
     def get_first (self, key):
-        # check if in three
+        '''returns least node >= key'''
+        # check if in tree
         node = self.root[key]
         if node:
             return node
@@ -187,12 +222,11 @@ class RB_Tree ():
         elif spot == "right":
             return successor(parent)
         else:
-            raise Exception ("no spot found for {key}")
+            raise Exception ("no spot found for {key}") # are there conditions where I expect to end up here?
         
 
-
-
     def keys (self):
+        '''returns an interator that fetches all keys'''
         def tree_iter ():
             least_left = least(self.root.left)
             current = least_left if least_left is not NILL else self.root
@@ -201,11 +235,12 @@ class RB_Tree ():
                 current = successor(current)
         return tree_iter()
 
-                   
-                
         
     def __setitem__ (self, key, value):
-        if not isinstance(key, self.keytype):
+        '''if keytype is proper
+           set ends with rb tree with node where node.key == key, where data in node.data
+        '''
+        if not isinstance(key, self.keytype): # so I already do some key type testing
             raise TypeError(f"Keys must be of value {self.keytype} not {type(key)}")
         if not self[key]:
             node = Node(key)
@@ -217,12 +252,14 @@ class RB_Tree ():
         return None
 
     def __delitem__ (self, key):
+        ''''''
         if not self[key]:
             return None
         else:
-            node = self.root[key]
-            success = successor(self.root[key])
-            newnode = Node(success.key)
+            node = self.root[key] 
+            success = successor(self.root[key]) # why not successor(node)?
+            newnode = Node(success.key) 
+            # don't I have to change the parent attributes of node.left and node.right?
             newnode.parent = node.parent
             newnode.left   = node.left
             newnode.right  = node.right
@@ -241,11 +278,15 @@ class RB_Tree ():
             
 class display_tree(RB_Tree):
     def __init__(self, root):
+        # this creates a tree for use in repr, idk
         self.root = root
         
 
 class Chronology (RB_Tree):
     def __init__ (self, root: Node):
+        '''creates a tree where labels must be Techentime
+           want to change this so that we check for 2-tuple
+        '''
         if not isinstance(root.key, Techentime):
             raise TypeError("Chronologies Require Techentime values not {type(root.key)} values for keys.")
         super().__init__(root)
