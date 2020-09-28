@@ -38,16 +38,16 @@ class Techentime (namedtuple("Techentime", ["n","unit",])):
 
     def __add__ (self, other: Number or Sequence):
         if isinstance(other, Number):
-            n    = *other
+            n    = other
             unit = self[1]
         else:
-            n, unit = *other
+            n, unit = other
         if unit != self[1]:
             raise ValueError(f'{self} cannot be added to techentime like object with unit {unit}')
-        return Techentime(self.n+other,self.unit)
+        return Techentime(self[0]+n,self.unit)
 
     def __sub__ (self, other):
-         if isinstance(other, Number):
+        if isinstance(other, Number):
             n    = -1*other
             unit = self[1]
         else:
