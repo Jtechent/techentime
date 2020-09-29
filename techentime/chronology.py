@@ -223,7 +223,12 @@ class RB_Tree ():
             return successor(parent)
         else:
             raise Exception ("no spot found for {key}") # are there conditions where I expect to end up here?
-        
+    
+    def key_to_label(self, key):
+        '''default key check function which must be over ridden in the chronology'''
+        if isinstance(key, self.keytype):
+            return key
+        return None
 
     def keys (self):
         '''returns an interator that fetches all keys'''
@@ -240,14 +245,16 @@ class RB_Tree ():
         '''if keytype is proper
            set ends with rb tree with node where node.key == key, where data in node.data
         '''
-        if not isinstance(key, self.keytype): # so I already do some key type testing
+        # change this to a keycheck function
+        label = self.key_to_label(key)
+        if not label:
             raise TypeError(f"Keys must be of value {self.keytype} not {type(key)}")
-        if not self[key]:
-            node = Node(key)
+        if not self[label]:
+            node = Node(label)
             node.data = [value]
             self.insert(node)
         else:
-            data = self[key]
+            data = self[label]
             data.append(value)
         return None
 
@@ -294,6 +301,11 @@ class Chronology (RB_Tree):
         root = Node(epoch << unit) if unit >= 0 else Node(epoch >> unit)
         super().__init__(root)
 
+    def key_to_label (self, key):
+        '''tests if the key is a 2-collection'''
+        if isinstance(key, Collection) and len(key) == 2:
+            return Techentime(key[0],key[1])
+        return None
 
  
 
