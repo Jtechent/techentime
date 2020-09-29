@@ -64,7 +64,9 @@ NILL.right  = NILL
 
 
 class Node (namedtuple('Node', ['key',])):
-    '''node used in rb-tree'''
+    '''node used in rb-tree
+       NEED to change the param key to label
+    '''
     def __new__(cls, key, **kwargs):
         '''creates nambed tuple decending node object with key'''
         obj = super(Node, cls).__new__(cls, key)
@@ -184,22 +186,38 @@ class RB_Tree ():
         return tree_iter()
 
     def __getitem__ (self, key) -> []:
+        '''Have to change this code a wee bit
+           I need to swap the use of keys for the use of labels in this func
+           here are the cases
+            key is not slice and label(key) [x]
+            key is not slice and not label(key) [x]
+            key is slice and not start or not stop []
+            key is slice and start and stop []
+        '''
         if not isinstance(key, slice):
-            # if key is not a slice, we are looking for a direct match
-            node = self.root[key]
+            label = self.key_to_label(key)
+            # key is not slice and not label(key)
+            if not label:
+                raise ValueError(f'key must be collection of form (n,{self.root.key[1]}) not {key}')
+            # key is not slice and label
+            node = self.root[label]
             return node.data if node else []
         else:
-            node = self.get_first(key.start) # assume get first gets the least-greater then key.start
+            # key is slice and not start or stop 
+            unit = self.root.key[1]
+            new_key = slice(key.start or (-inf, unit), key.stop or (inf, unit), key.step or 1)
+            node = self.get_first(new_key.start) # assume get first gets the least-greater then key.start
             if (not node) or node.key > key.stop:
                 return [] # if there are not any nodes in the period defined by slice then we have the answer
         values = []
-        start = key.start
-        stop  = key.stop # what if slice is made via [n:]? or [:n]? I assume slices like tree[1:23]
-        step  = abs(key.step) if key.step else 1
-        traverse = iter if step > 0 else reversed
+        start = new_key.start
+        stop  = new_key.stop # what if slice is made via [n:]? or [:n]? I assume slices like tree[1:23]
+        step  = abs(new_key.step) if key.step else 1
+        # traversal is reversed if start > stop
+        traverse = reversed if start > stop else iter
 
-        for i, value in enumerate(traverse(node)): # traversal is done in the node level
-            if i>=stop.n: # here we assume that stop is a techentime object; also, i is not a number expected to have meaningful compare to techentime.n
+        for i, value in enumerate(traverse(node)): # traversal is done in the node level 
+            if value.key.n>=stop.n: 
                 break
             if i%step == 0:
                 if isinstance(value.data, Iterable):
